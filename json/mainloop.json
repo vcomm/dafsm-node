@@ -1,0 +1,85 @@
+{
+  "id": "mainloop",
+  "type": "FSM",
+  "prj": "test_",
+  "complete": false,
+  "start": {
+    "name": "fn_initialize"
+  },
+  "stop": {
+    "name": "fn_finishing"
+  },
+  "countstates": 4,
+  "states": [
+    {
+      "key": "init",
+      "name": "InitialState",
+      "transitions": [
+        {
+          "nextstatename": "request",
+          "triggers": [
+            {
+              "name": "ev_envComplete"
+            }
+          ],
+          "effects": [
+            {
+              "name": "fn_reqPrepare"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "request",
+      "superstate": {
+        "link": "superstate.json"
+      },
+      "name": "superstate",
+      "transitions": [
+        {
+          "nextstatename": "response",
+          "triggers": [
+            {
+              "name": "ev_reqComplete"
+            }
+          ],
+          "effects": [
+            {
+              "name": "fn_resPrepare"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "response",
+      "name": "resState",
+      "entries": [
+        {
+          "name": "fn_initResponse"
+        }
+      ],
+      "exits": [
+        {
+          "name": "fn_sendResponse"
+        }
+      ],
+      "transitions": [
+        {
+          "nextstatename": "request",
+          "triggers": [
+            {
+              "name": "ev_resComplete"
+            }
+          ],
+          "effects": [
+            {
+              "name": "fn_updateSession"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+    "id": "superstate",
+    "type": "FSM",
+    "prj": "test_",
+    "complete": false,
+    "start": {"name": "fnStart"},
+    "stop": {"name": "fnStop"},
+    "countstates": 3,
+    "states": [
+        {
+          "key": "init",
+          "name": "InitialState",
+          "exits": [{"name": "fnLetsgo"}],
+          "transitions": [
+            {
+              "nextstatename": "final",
+              "triggers": [{"name": "evComplete"}],
+              "effects": [{"name": "fnGoto"}]
+            }
+          ]
+        },{
+          "key": "final",
+          "name": "FinalState",
+          "entries": [{"name": "fnGoodbye"}]
+        }
+    ]
+}

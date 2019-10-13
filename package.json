@@ -1,0 +1,20 @@
+{
+    "name": "dafsm",
+    "version": "2.0.0",
+    "description": "dafsm",
+    "main": "index.js",
+    "directories": {
+      "src": "src"
+    },
+    "scripts": {
+      "test": "node test"
+    },
+    "keywords": [
+      "fsm"
+    ],
+    "author": "Yakov Liskoff",
+    "license": "MIT",
+    "dependencies": {
+
+    }
+  }
