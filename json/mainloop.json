@@ -36,6 +36,11 @@
         "link": "superstate.json"
       },
       "name": "superstate",
+      "entries": [
+        {
+          "name": "fn_initResponse"
+        }
+      ],
       "transitions": [
         {
           "nextstatename": "response",

@@ -6,8 +6,8 @@
 
 class Dafsm {
     /* Constructor */
-    constructor(text){
-        this._name_ = text;
+    constructor(path){
+        this._path_ = path;
     }
 
     /** Implementation required */
@@ -120,12 +120,11 @@ class Dafsm {
                     this.exitAction(cntx)
                     this.effectAction(trans,cntx)
                     cntx.set('keystate',nextstate)
+                    this.entryAction(cntx)
                     if(nextstate.hasOwnProperty("superstate")) {
                         this.switch(cntx, nextstate.superstate, nextstate.name)
-                    } else {
-                        this.entryAction(cntx)
-                    }               
-                    this.queuecall(cntx)
+                    }              
+                    this.queuecall(cntx)  
                 } else {
                     throw new fsmError("FSM error: next state missing", e);
                 }
@@ -210,8 +209,8 @@ class Content {
  
 class Wrapper extends Dafsm {
     /* Constructor */
-    constructor(text){
-        super(text)
+    constructor(path){
+        super(path)
         this._logics_   = {}
         this._seqfuncs_ = []
     }
@@ -257,7 +256,7 @@ class Wrapper extends Dafsm {
     }
     read(link) {
         //console.debug(`Current directory: ${__dirname}`)
-        return require(`${this._name_}${link}`)
+        return require(`${this._path_}${link}`)
     }
     load(json) {
         let logic = null
@@ -285,22 +284,30 @@ class Wrapper extends Dafsm {
 
 class AsyncWrapper extends Wrapper {
     /* Constructor */
-    constructor(text){
-        super(text)
+    constructor(path){
+        super(path)
     }
-/*
-    async def seqcall(self, cntx):
-        for func in self._seqfuncs_:
-            if asyncio.iscoroutinefunction(func) is True:
-                await func(cntx)
-            else:
-                func(cntx)
 
-    def queuecall(self, cntx):
-        asyncio.run(self.seqcall(cntx))
-        self._seqfuncs_.clear()
-        print('Execute Queue calls')
-*/
+    async runcall(func, cntx) {
+        return (func.constructor.name === 'AsyncFunction')
+            ? await func(cntx)
+            : func(cntx);
+    } 
+    async seqcall(funcs, cntx) {
+        let data = cntx
+        await funcs.reduce( 
+            (p, func) => p.then(
+                () => this.runcall(func, data).then(
+                    result => {
+                        funcs.shift()
+                })
+            ), Promise.resolve(cntx)
+        )
+    }
+    async queuecall(cntx) {
+        await this.seqcall(this._seqfuncs_,cntx)
+        console.debug('Execute Queue calls')
+    }
 }
 
 if (typeof module !== 'undefined' &&
@@ -308,4 +315,5 @@ if (typeof module !== 'undefined' &&
     module.exports.DAFSM = Dafsm
     module.exports.CONTENT = Content
     module.exports.WRAPPER = Wrapper
+    module.exports.ASYNCWRAPPER = AsyncWrapper
 }
