@@ -126,14 +126,14 @@ class Dafsm {
                     }              
                     this.queuecall(cntx)  
                 } else {
-                    throw new fsmError("FSM error: next state missing", e);
+                    throw this.fsmError("FSM error: next state missing", e);
                 }
             } else {
                 this.stayAction(cntx)
                 this.queuecall(cntx)
             }
         } catch(e) {
-            console.log('Error: ' + e.name + ":" + e.message + "\n" + e.stack);
+            console.error('Error: ' + e.name + ":" + e.message + "\n" + e.stack);
         } finally {
             //let state = cntx.logic.states[cntx.keystate]
             let state = cntx.get()['keystate']
@@ -280,6 +280,61 @@ class Wrapper extends Dafsm {
             console.error("Error: cannot find init state")
         return null
     }
+
+    validate(lname, cntx) {
+        let status = true
+        try {
+            const logic = this._logics_[lname]
+            const states = logic['states']
+            const bios = cntx.bios()
+            if (states instanceof Array) {
+                states.forEach(state => {
+                    if (state && state.hasOwnProperty("exits")) {
+                        state.exits.forEach(ext => {
+                            if (!bios[ext.name])
+                                throw this.fsmError(`Wrong Exit function: ${ext.name}`, e);
+                        })
+                    }  
+                    if (state && state.hasOwnProperty("stays")) {
+                        state.stays.forEach(stay => {
+                            if (!bios[stay.name])
+                                throw this.fsmError(`Wrong Stay function: ${stay.name}`, e);
+                        })
+                    }
+                    if (state && state.hasOwnProperty("entries")) {
+                        state.entries.forEach(ent => {
+                            if (!bios[ent.name])
+                                throw this.fsmError(`Wrong Entry function: ${ent.name}`, e);
+                        })
+                    }  
+                    if (state && state.hasOwnProperty("transitions")) {
+                        state.transitions.forEach(trans => {
+                            if (trans.hasOwnProperty("triggers")) {
+                                trans.triggers.forEach(trig => {
+                                    if (!bios[trig.name])
+                                        throw this.fsmError(`Wrong Trigger function: ${trig.name}`, e);
+                                })
+                            }
+                            if (trans.hasOwnProperty("effects")) {
+                                trans.effects.forEach(eff => {
+                                    if (!bios[eff.name])
+                                        throw this.fsmError(`Wrong Effect function: ${eff.name}`, e);
+                                })
+                            }
+                        })                        
+                    }                                                
+                })
+            } else {
+                console.error('State List is not list')
+                status = false
+            }
+        } catch(e) {
+            console.error('Error: ' + e.name + ":" + e.message + "\n" + e.stack);
+            status = false
+        } finally {
+            return status
+        }
+    }
 }
 
 class AsyncWrapper extends Wrapper {
@@ -307,6 +362,8 @@ class AsyncWrapper extends Wrapper {
     async queuecall(cntx) {
         await this.seqcall(this._seqfuncs_,cntx)
         console.debug('Execute Queue calls')
+//        Promise.resolve(await this.seqcall(this._seqfuncs_,cntx))
+//            .then(() => console.debug('Execute Queue calls'));
     }
 }
 

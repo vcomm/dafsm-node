@@ -83,10 +83,11 @@ const engine = new asyncwrapper('.././json/')
 engine.init(engine.load(engine.read('mainloop.json')), myCntn)
 myCntn.engine(engine)
 
+console.debug('Validate: ', engine.validate('mainloop', myCntn))
 
 //while(myCntn.get()['complete'] != true)
     myCntn.emit()
-
+    
 
 /*
 const bios = myCntn.bios()
