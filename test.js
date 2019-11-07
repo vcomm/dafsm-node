@@ -26,52 +26,89 @@ class Cntn extends require('./src/dafsm').CONTENT {
             evComplete: this.evComplete,
             fnGoto: this.fnGoto,
             fnGoodbye: this.fnGoodbye,
+            fnCount: this.fnCount,
+            evCounFinish: this.evCounFinish,
+            evContinue: this.evContinue,
         }
     }
     ev_envComplete(cntx) {
         console.debug(`: Run ev_envComplete:" ${cntx.counter++}`)
         return true
     }
+    
     async fn_reqPrepare(cntx) {
         return (new Promise(resolve => {
             setTimeout(() => resolve(cntx), 1000)
         })).then(data => {
-                console.log(`async run fn_reqPrepare: ${cntx.counter++}`);
-                return data;
+                console.log(`: Run async fn_reqPrepare: ${cntx.counter++}`);
+                //return data;
             });
     }
+    /*
+    fn_reqPrepare(cntx) {
+        console.debug(`: Run fn_reqPrepare: ${cntx.counter++}`)
+    }*/
     ev_reqComplete(cntx) {
         console.debug(`: Run ev_reqComplete: ${cntx.counter++}`)
         return true
     }
     fn_resPrepare(cntx) {
-        console.debug(`: Run fn_resPrepare:" ${cntx.counter++}`)
+        console.debug(`: Run fn_resPrepare: ${cntx.counter++}`)
     }
     fn_initResponse(cntx) {
-        console.debug(`: Run fn_initResponse:" ${cntx.counter++}`)
+        console.debug(`: Run fn_initResponse: ${cntx.counter++}`)
     }
     fn_sendResponse(cntx) {
-        console.debug(`: Run fn_sendResponse:" ${cntx.counter++}`)
+        console.debug(`: Run fn_sendResponse: ${cntx.counter++}`)
     }
     ev_resComplete(cntx) {
-        console.debug(`: Run ev_resComplete:" ${cntx.counter++}`)
+        console.debug(`: Run ev_resComplete: ${cntx.counter++}`)
         return true
     }
     fn_updateSession(cntx) {
-        console.debug(`: Run fn_updateSession:" ${cntx.counter++}`)
+        console.debug(`: Run fn_updateSession: ${cntx.counter++}`)
     }
     fnLetsgo(cntx) {
-        console.debug(`: Run fnLetsgo:" ${cntx.counter++}`)
+        console.debug(`: Run fnLetsgo: ${cntx.counter++}`)
     }
     evComplete(cntx) {
-        console.debug(`: Run evComplete:" ${cntx.counter++}`)
+        console.debug(`: Run evComplete: ${cntx.counter++}`)
         return true
     }
     fnGoto(cntx) {
-        console.debug(`: Run fnGoto:" ${cntx.counter++}`)
+        console.debug(`: Run fnGoto: ${cntx.counter++}`)
     }
     fnGoodbye(cntx) {
-        console.debug(`: Run fnGoodbye:" ${cntx.counter++}`)
+        console.debug(`: Run fnGoodbye: ${cntx.counter++}`)
+    }
+    fnCount(cntx) {
+        console.debug(`: Run fnCount: ${cntx.counter++}`)
+        cntx.counter += 100        
+    }
+    evContinue(cntx) {
+        console.debug(`: Run evContinue: ${cntx.counter++}`)
+        if (cntx.counter < 1000)
+            return true
+        else
+            return false
+    }
+    evCounFinish(cntx) {
+        console.debug(`: Run evCounFinish: ${cntx.counter++}`)
+        if (cntx.counter > 1000)
+            return true
+        else
+            return false
+    }
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function loop() {
+    while(myCntn.get()['complete'] != true) {
+        await myCntn.emit()
+        await sleep(500);
     }
 }
 
@@ -80,14 +117,13 @@ const myCntn = new Cntn()
 //const main = require('./json/mainloop.json')
 
 const engine = new asyncwrapper('.././json/')
+//const engine = new wrapper('.././json/')
 engine.init(engine.load(engine.read('mainloop.json')), myCntn)
 myCntn.engine(engine)
 
 console.debug('Validate: ', engine.validate('mainloop', myCntn))
 
-//while(myCntn.get()['complete'] != true)
-    myCntn.emit()
-    
+loop()
 
 /*
 const bios = myCntn.bios()

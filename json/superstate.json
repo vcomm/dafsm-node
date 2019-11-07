@@ -1,27 +1,85 @@
 {
-    "id": "superstate",
-    "type": "FSM",
-    "prj": "test_",
-    "complete": false,
-    "start": {"name": "fnStart"},
-    "stop": {"name": "fnStop"},
-    "countstates": 3,
-    "states": [
+  "id": "superstate",
+  "type": "FSM",
+  "prj": "test_",
+  "complete": false,
+  "start": {
+    "name": "fnStart"
+  },
+  "stop": {
+    "name": "fnStop"
+  },
+  "countstates": 3,
+  "states": [
+    {
+      "key": "init",
+      "name": "InitialState",
+      "exits": [
         {
-          "key": "init",
-          "name": "InitialState",
-          "exits": [{"name": "fnLetsgo"}],
-          "transitions": [
+          "name": "fnLetsgo"
+        }
+      ],
+      "transitions": [
+        {
+          "nextstatename": "try",
+          "triggers": [
             {
-              "nextstatename": "final",
-              "triggers": [{"name": "evComplete"}],
-              "effects": [{"name": "fnGoto"}]
+              "name": "evComplete"
+            }
+          ],
+          "effects": [
+            {
+              "name": "fnGoto"
             }
           ]
-        },{
-          "key": "final",
-          "name": "FinalState",
-          "entries": [{"name": "fnGoodbye"}]
         }
-    ]
+      ]
+    },
+    {
+      "key": "try",
+      "name": "CountState",
+      "stays": [
+        {
+          "name": "fnCount"
+        }
+      ],
+      "transitions": [
+        {
+          "nextstatename": "final",
+          "triggers": [
+            {
+              "name": "evCounFinish"
+            }
+          ],
+          "effects": [
+            {
+              "name": "fnGoto"
+            }
+          ]
+        },
+        {
+          "nextstatename": "try",
+          "triggers": [
+            {
+              "name": "evContinue"
+            }
+          ],
+          "effects": [
+            {
+              "name": "fnCount"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "final",
+      "name": "FinalState",
+      "entries": [
+        {
+          "name": "fnGoodbye"
+        }
+      ]
+    }
+  ]
 }

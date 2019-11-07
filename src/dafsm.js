@@ -1,6 +1,51 @@
 'use strict';
 
 /*
+ *
+ */
+const { EventEmitter } = require('events');
+
+class Mutex {
+    /* Constructor */
+    constructor() {
+        this._locked = false;
+        this._ee = new EventEmitter();
+    }
+
+    isLocked() {
+        return this._locked;
+    }
+    acquire() {
+        return new Promise(resolve => {
+            // If nobody has the lock, take it and resolve immediately
+            if (!this._locked) {
+              // Safe because JS doesn't interrupt you on synchronous operations,
+              // so no need for compare-and-swap or anything like that.
+              this._locked = true;
+              console.log(`Lock Mutex`)
+              return resolve();
+            }
+      
+            // Otherwise, wait until somebody releases the lock and try again
+            const tryAcquire = () => {
+              if (!this._locked) {
+                this._locked = true;
+                this._ee.removeListener('release', tryAcquire);
+                return resolve();
+              }
+            };
+            this._ee.on('release', tryAcquire);
+          });
+    }
+    release() {
+        // Release the lock immediately
+        this._locked = false;
+        console.log(`UnLock Mutex`)
+        setImmediate(() => this._ee.emit('release'));
+    }
+}
+
+/*
  * Class DAFSM implementation by ES6 for node.js / client browser
  */
 
@@ -54,8 +99,16 @@ class Dafsm {
                 trans = state.transitions[i]
                 if (trans.hasOwnProperty("triggers")) {
                     for(let j=0; j<trans.triggers.length; j++) {
-                        if (this.trigger(trans.triggers[j].name, cntx))
+                        const res = this.trigger(trans.triggers[j].name, cntx)
+                        if (typeof res === "boolean" && res === true) {
                             return trn = trans
+                        } /*else if (res instanceof Promise) {
+                            res.then((data) => {
+                                if (typeof data === "boolean" && data === true) {
+                                    trn = trans
+                                }
+                            })
+                        }*/
                     }
                 }
             }
@@ -201,8 +254,9 @@ class Content {
         return this
     }
     emit() {
-        if (this._engine_) 
+        if (this._engine_) {
             this._engine_.event(this)
+        }
         return this
     }
 }
@@ -227,14 +281,14 @@ class Wrapper extends Dafsm {
     call(fname, cntx) {
         const bios = cntx.bios()
         this._seqfuncs_.push(bios[fname])
-        console.debug('Accelerate functions seq')
+        console.debug(`Accelerate functions seq: ${fname}`)
     }
     queuecall(cntx) {
+        console.debug(`Execute Queue ${this._seqfuncs_.length} calls`)
         this._seqfuncs_.forEach(func => {
             func(cntx)
         })
         this._seqfuncs_= []
-        console.debug('Execute Queue calls')
     }
     switch(cntx, sstate, name) {
         let logic = null
@@ -341,6 +395,7 @@ class AsyncWrapper extends Wrapper {
     /* Constructor */
     constructor(path){
         super(path)
+        this._mutex = new Mutex();
     }
 
     async runcall(func, cntx) {
@@ -360,10 +415,56 @@ class AsyncWrapper extends Wrapper {
         )
     }
     async queuecall(cntx) {
+        console.debug(`Execute Queue ${this._seqfuncs_.length} calls`)
         await this.seqcall(this._seqfuncs_,cntx)
-        console.debug('Execute Queue calls')
 //        Promise.resolve(await this.seqcall(this._seqfuncs_,cntx))
 //            .then(() => console.debug('Execute Queue calls'));
+    }
+    async event(cntx) {
+        await this._mutex.acquire()  
+        return (new Promise((resolve,reject) => {
+            const keystate = cntx.get()['keystate']
+            if (keystate) resolve(keystate)
+            else reject(this.fsmError("FSM error: missing current state", e))            
+        }))
+        .then((curstate) => {
+            return this.eventListener(cntx)
+        })
+        .then(trans => { 
+            if (trans) {
+                this.exitAction(cntx)
+                this.effectAction(trans,cntx)                
+                return this.gotoNextstate(trans,cntx.get()['logic'])
+            } else {
+                this.stayAction(cntx)
+                this.queuecall(cntx)              
+            }
+        })
+        .then(async nextstate => { 
+            if (nextstate) {
+                cntx.set('keystate',nextstate)
+                this.entryAction(cntx)
+                if(nextstate.hasOwnProperty("superstate")) {
+                    this.switch(cntx, nextstate.superstate, nextstate.name)
+                }              
+                await this.queuecall(cntx)  
+            } else {
+                throw this.fsmError("FSM error: next state missing", e);
+            }            
+        })
+        .catch(e => {
+            console.error('Error: ' + e.name + ":" + e.message + "\n" + e.stack);
+        })
+        .finally(() => {
+            const state = cntx.get()['keystate']
+            if (state &&
+                (!state.hasOwnProperty("transitions") ||
+                    state.transitions.length == 0)) {
+                cntx.complete = true
+                this.unswitch(cntx)
+            }
+            this._mutex.release()
+        })
     }
 }
 
