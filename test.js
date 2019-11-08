@@ -108,7 +108,7 @@ function sleep(ms) {
 async function loop() {
     while(myCntn.get()['complete'] != true) {
         await myCntn.emit()
-        await sleep(500);
+        await sleep(100);
     }
 }
 

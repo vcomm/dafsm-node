@@ -5,11 +5,12 @@
  */
 const { EventEmitter } = require('events');
 
-class Mutex {
+class Mutex extends EventEmitter {
     /* Constructor */
     constructor() {
+        super()
         this._locked = false;
-        this._ee = new EventEmitter();
+//        this._ee = new EventEmitter();
     }
 
     isLocked() {
@@ -30,18 +31,21 @@ class Mutex {
             const tryAcquire = () => {
               if (!this._locked) {
                 this._locked = true;
-                this._ee.removeListener('release', tryAcquire);
+//                this._ee.removeListener('release', tryAcquire);
+                super.removeListener('release', tryAcquire);
                 return resolve();
               }
             };
-            this._ee.on('release', tryAcquire);
+//            this._ee.on('release', tryAcquire);
+              super.on('release', tryAcquire);
           });
     }
     release() {
         // Release the lock immediately
         this._locked = false;
         console.log(`UnLock Mutex`)
-        setImmediate(() => this._ee.emit('release'));
+//        setImmediate(() => this._ee.emit('release'));
+        setImmediate(() => super.emit('release'));
     }
 }
 
@@ -201,9 +205,10 @@ class Dafsm {
     }
 }
 
-class Content {
+class Content extends Mutex {
     /* Constructor */
     constructor(text){
+        super()
         this._name_ = text;
         this._status_ = [];
         this._engine_ = null;
@@ -253,7 +258,7 @@ class Content {
         this.set("keystate", istate)
         return this
     }
-    emit() {
+    async emit() {
         if (this._engine_) {
             this._engine_.event(this)
         }
@@ -395,7 +400,7 @@ class AsyncWrapper extends Wrapper {
     /* Constructor */
     constructor(path){
         super(path)
-        this._mutex = new Mutex();
+//        this._mutex = new Mutex();
     }
 
     async runcall(func, cntx) {
@@ -421,7 +426,8 @@ class AsyncWrapper extends Wrapper {
 //            .then(() => console.debug('Execute Queue calls'));
     }
     async event(cntx) {
-        await this._mutex.acquire()  
+//        await this._mutex.acquire()  
+        await cntx.acquire()  
         return (new Promise((resolve,reject) => {
             const keystate = cntx.get()['keystate']
             if (keystate) resolve(keystate)
@@ -463,7 +469,8 @@ class AsyncWrapper extends Wrapper {
                 cntx.complete = true
                 this.unswitch(cntx)
             }
-            this._mutex.release()
+//            this._mutex.release()
+            cntx.release()
         })
     }
 }
